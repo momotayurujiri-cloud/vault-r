@@ -81,13 +81,37 @@
     input,select,textarea{width:100%;padding:12px;background:#151515;color:#eee;border:1px solid #333;outline:none}
     textarea{min-height:90px;resize:vertical}
     .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-    .photoPreview{height:180px;border:1px dashed #373737;background:#101010;display:grid;place-items:center;overflow:hidden;margin-bottom:10px}
+    .photoPreview{height:200px;border:1px dashed #373737;background:#101010;display:grid;place-items:center;overflow:hidden;margin-bottom:8px;position:relative}
     .photoPreview img{width:100%;height:100%;object-fit:cover}
+    .coverBadge{position:absolute;left:9px;bottom:9px;background:rgba(0,0,0,.78);border:1px solid #7d1b23;color:#ff7b84;padding:5px 7px;font-size:8px;letter-spacing:.14em}
+    .photoThumbs{display:flex;gap:7px;overflow-x:auto;padding:2px 1px 8px;margin-bottom:8px;scrollbar-width:none}
+    .photoThumbs::-webkit-scrollbar{display:none}
+    .photoThumb{position:relative;flex:0 0 74px;height:74px;border:1px solid #343434;background:#111;overflow:hidden}
+    .photoThumb.cover{border-color:var(--accent2);box-shadow:0 0 0 1px rgba(229,27,42,.35)}
+    .photoThumb img{width:100%;height:100%;object-fit:cover;display:block}
+    .photoThumb .num{position:absolute;left:4px;bottom:4px;background:rgba(0,0,0,.78);padding:2px 4px;font-size:8px;color:#ddd}
+    .photoThumb.cover .num{color:#ff7b84}
+    .photoThumb .removePhoto{position:absolute;right:3px;top:3px;width:22px;height:22px;border:1px solid rgba(255,255,255,.25);background:rgba(0,0,0,.78);color:#fff;padding:0;line-height:18px;font-size:15px}
+    .photoThumb .setCover{position:absolute;inset:0;border:0;background:transparent;color:transparent}
+    .photoThumb .removePhoto{z-index:2}
+    .photoHelp{display:flex;justify-content:space-between;gap:8px;color:#777;font-size:9px;letter-spacing:.08em;margin:-1px 0 10px}
+    .photoHelp b{color:#aaa;font-weight:600}
     .btn{width:100%;border:1px solid #3a3a3a;background:#171717;color:#eee;padding:13px;letter-spacing:.08em}
     .btn.primary{background:var(--accent);border-color:#dd2735}
     .btn.danger{background:#160a0c;border-color:#5d1118;color:#ff7680}
     .detailHero{height:300px;border:1px solid var(--line);background:#0e0e0e;overflow:hidden;margin-bottom:14px}
     .detailHero img{width:100%;height:100%;object-fit:cover}
+    .detailGallery{position:relative;border:1px solid var(--line);background:#0e0e0e;margin-bottom:14px;overflow:hidden}
+    .detailScroller{height:330px;display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scroll-behavior:smooth;scrollbar-width:none}
+    .detailScroller::-webkit-scrollbar{display:none}
+    .detailSlide{flex:0 0 100%;height:100%;scroll-snap-align:center;scroll-snap-stop:always;background:#0c0c0c}
+    .detailSlide img{width:100%;height:100%;object-fit:cover;display:block}
+    .galleryBar{position:absolute;left:0;right:0;bottom:0;display:flex;justify-content:space-between;align-items:center;padding:24px 10px 9px;background:linear-gradient(transparent,rgba(0,0,0,.82));pointer-events:none}
+    .galleryCount{font-size:9px;letter-spacing:.16em;color:#eee}
+    .galleryHint{font-size:8px;letter-spacing:.14em;color:#aaa}
+    .galleryDots{display:flex;gap:4px;align-items:center}
+    .galleryDot{width:5px;height:5px;border-radius:50%;background:#68635f;opacity:.65}
+    .galleryDot.on{background:var(--accent2);opacity:1}
     .detailTitle{font-size:24px;margin:0 0 6px}
     .detailMeta{color:var(--muted);font-size:12px;margin-bottom:16px}
     .detailGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
@@ -161,7 +185,7 @@
 
   <section id="settingsScreen" class="screen">
     <div class="content">
-      <div class="sectionHead"><h2>LOCAL VAULT</h2><small>v0.2</small></div>
+      <div class="sectionHead"><h2>LOCAL VAULT</h2><small>v0.3</small></div>
       <div class="utility">
         <div class="installCard" id="installCard">
           <b>APP MODE</b>
@@ -194,7 +218,9 @@
     <form id="itemForm">
       <input type="hidden" id="itemId" />
       <div class="photoPreview" id="photoPreview"><span style="color:#666;font-size:12px;letter-spacing:.12em">NO IMAGE</span></div>
-      <div class="field"><label>PHOTO</label><input id="photoInput" type="file" accept="image/*" /></div>
+      <div class="photoThumbs" id="photoThumbs"></div>
+      <div class="photoHelp"><span>画像をタップ → <b>表紙に設定</b></span><span id="photoCount">0 / 8</span></div>
+      <div class="field"><label>PHOTOS — MULTI SELECT OK</label><input id="photoInput" type="file" accept="image/*" multiple /></div>
       <div class="field"><label>NAME *</label><input id="nameInput" required placeholder="e.g. CHITOSELIUM / RX-78-2" /></div>
       <div class="grid2">
         <div class="field"><label>CATEGORY</label><select id="categoryInput"><option value="model">MODEL KIT</option><option value="figure">FIGURE</option><option value="other">OTHER</option></select></div>
@@ -217,41 +243,156 @@
 
 <script>
 (() => {
-  const KEY = 'vaultr_items_v02';
-  const OLD_KEY = 'vaultr_items_v01';
-  let items = loadItems();
-  let currentPhoto = '';
+  const DB_NAME = 'vaultr_db';
+  const DB_VERSION = 1;
+  const STORE = 'items';
+  const LEGACY_KEYS = ['vaultr_items_v02', 'vaultr_items_v01'];
+  const FALLBACK_KEY = 'vaultr_items_v03';
+  const MIGRATION_DONE = 'vaultr_v03_migration_done';
+  const MAX_PHOTOS = 8;
+  let storageMode = 'indexedDB';
+  let dbPromise = null;
+  let items = [];
+  let currentPhotos = [];
+  let currentCoverIndex = 0;
   let currentDetailId = null;
 
   const $ = s => document.querySelector(s);
   const $$ = s => [...document.querySelectorAll(s)];
 
-  function loadItems(){
-    try {
-      const current = localStorage.getItem(KEY);
-      if(current) return JSON.parse(current);
-      const old = localStorage.getItem(OLD_KEY);
-      if(old){
-        localStorage.setItem(KEY, old);
-        return JSON.parse(old);
-      }
-      return [];
-    } catch(e){ return []; }
-  }
-  function saveItems(){
-    localStorage.setItem(KEY, JSON.stringify(items));
-    renderAll();
-  }
   function escapeHtml(str=''){
     return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   }
+  function normalizeItem(raw={}){
+    const photos = Array.isArray(raw.photos) ? raw.photos.filter(Boolean).slice(0,MAX_PHOTOS) : (raw.photo ? [raw.photo] : []);
+    let coverIndex = Number.isInteger(raw.coverIndex) ? raw.coverIndex : 0;
+    if(coverIndex < 0 || coverIndex >= photos.length) coverIndex = 0;
+    return {
+      ...raw,
+      photos,
+      coverIndex,
+      photo: photos[coverIndex] || photos[0] || ''
+    };
+  }
+  function coverPhoto(item){
+    const n = normalizeItem(item);
+    return n.photos[n.coverIndex] || n.photos[0] || '';
+  }
+
+  function openDb(){
+    if(dbPromise) return dbPromise;
+    dbPromise = new Promise((resolve,reject)=>{
+      if(!('indexedDB' in window)) return reject(new Error('IndexedDB unavailable'));
+      const req = indexedDB.open(DB_NAME, DB_VERSION);
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        if(!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE,{keyPath:'id'});
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error || new Error('IndexedDB open failed'));
+    });
+    return dbPromise;
+  }
+  async function dbGetAll(){
+    const db=await openDb();
+    return new Promise((resolve,reject)=>{
+      const req=db.transaction(STORE,'readonly').objectStore(STORE).getAll();
+      req.onsuccess=()=>resolve(req.result || []); req.onerror=()=>reject(req.error);
+    });
+  }
+  async function dbPut(item){
+    const db=await openDb();
+    return new Promise((resolve,reject)=>{
+      const tx=db.transaction(STORE,'readwrite');
+      tx.objectStore(STORE).put(item);
+      tx.oncomplete=()=>resolve(); tx.onerror=()=>reject(tx.error); tx.onabort=()=>reject(tx.error || new Error('write aborted'));
+    });
+  }
+  async function dbDelete(id){
+    const db=await openDb();
+    return new Promise((resolve,reject)=>{
+      const tx=db.transaction(STORE,'readwrite'); tx.objectStore(STORE).delete(id);
+      tx.oncomplete=()=>resolve(); tx.onerror=()=>reject(tx.error);
+    });
+  }
+  async function dbReplaceAll(nextItems){
+    const db=await openDb();
+    return new Promise((resolve,reject)=>{
+      const tx=db.transaction(STORE,'readwrite');
+      const store=tx.objectStore(STORE); store.clear(); nextItems.forEach(x=>store.put(x));
+      tx.oncomplete=()=>resolve(); tx.onerror=()=>reject(tx.error); tx.onabort=()=>reject(tx.error || new Error('replace aborted'));
+    });
+  }
+  async function dbClear(){
+    const db=await openDb();
+    return new Promise((resolve,reject)=>{
+      const tx=db.transaction(STORE,'readwrite'); tx.objectStore(STORE).clear();
+      tx.oncomplete=()=>resolve(); tx.onerror=()=>reject(tx.error);
+    });
+  }
+
+  function getLegacyItems(){
+    for(const key of [FALLBACK_KEY,...LEGACY_KEYS]){
+      try{
+        const raw=localStorage.getItem(key);
+        if(raw){
+          const parsed=JSON.parse(raw);
+          if(Array.isArray(parsed)) return parsed.map(normalizeItem);
+        }
+      }catch(e){}
+    }
+    return [];
+  }
+  async function loadItems(){
+    try{
+      const stored=(await dbGetAll()).map(normalizeItem);
+      if(stored.length){ localStorage.setItem(MIGRATION_DONE,'1'); return stored; }
+      if(localStorage.getItem(MIGRATION_DONE)!=='1'){
+        const legacy=getLegacyItems();
+        if(legacy.length) await dbReplaceAll(legacy);
+        localStorage.setItem(MIGRATION_DONE,'1');
+        return legacy;
+      }
+      return [];
+    }catch(err){
+      storageMode='localStorage';
+      return getLegacyItems();
+    }
+  }
+  async function persistItem(item){
+    const normalized=normalizeItem(item);
+    if(storageMode==='indexedDB') await dbPut(normalized);
+    else {
+      const next=[...items.filter(x=>x.id!==normalized.id),normalized];
+      localStorage.setItem(FALLBACK_KEY,JSON.stringify(next));
+    }
+    const idx=items.findIndex(x=>x.id===normalized.id);
+    if(idx>=0) items[idx]=normalized; else items.push(normalized);
+    renderAll();
+  }
+  async function removeItem(id){
+    if(storageMode==='indexedDB') await dbDelete(id);
+    items=items.filter(x=>x.id!==id);
+    if(storageMode==='localStorage') localStorage.setItem(FALLBACK_KEY,JSON.stringify(items));
+    renderAll();
+  }
+  async function replaceAll(next){
+    const normalized=next.map(normalizeItem);
+    if(storageMode==='indexedDB') await dbReplaceAll(normalized);
+    else localStorage.setItem(FALLBACK_KEY,JSON.stringify(normalized));
+    items=normalized; renderAll();
+  }
+
   function emptyMarkup(msg='NO ARTIFACTS RECORDED'){
     return `<div class="empty"><b>${msg}</b><span>Tap + to register your collection.</span></div>`;
   }
-  function cardMarkup(item){
-    const img = item.photo ? `<img src="${item.photo}" alt="">` : `<div class="placeholder"></div>`;
+  function cardMarkup(raw){
+    const item=normalizeItem(raw);
+    const photo=coverPhoto(item);
+    const img = photo ? `<img src="${photo}" alt="">` : `<div class="placeholder"></div>`;
     const cat = item.category === 'model' ? 'MODEL KIT' : item.category === 'figure' ? 'FIGURE' : 'OTHER';
     const status = (item.status || 'unbuilt').toUpperCase();
+    const photoChip = item.photos.length>1 ? `<span class="chip">${item.photos.length} PHOTOS</span>` : '';
     return `<article class="card" data-open="${item.id}">
       <div class="thumb">${img}</div>
       <div class="cardBody">
@@ -259,7 +400,7 @@
           <div style="min-width:0"><h3>${escapeHtml(item.name)}</h3><div class="meta">${escapeHtml(item.maker || 'UNKNOWN MAKER')} ${item.scale ? ' / '+escapeHtml(item.scale) : ''}</div></div>
           <button class="fav ${item.favorite?'on':''}" data-fav="${item.id}" aria-label="favorite">◆</button>
         </div>
-        <div class="chips"><span class="chip">${cat}</span><span class="chip ${item.status==='built'?'red':''}">${status}</span>${item.storage?`<span class="chip">${escapeHtml(item.storage)}</span>`:''}</div>
+        <div class="chips"><span class="chip">${cat}</span><span class="chip ${item.status==='built'?'red':''}">${status}</span>${item.storage?`<span class="chip">${escapeHtml(item.storage)}</span>`:''}${photoChip}</div>
       </div>
     </article>`;
   }
@@ -270,10 +411,8 @@
     $('#statFav').textContent = items.filter(x=>x.favorite).length;
     $('#collectionCount').textContent = `${total} artifact${total===1?'':'s'}`;
     $('#lastUpdated').textContent = total ? 'LOCAL DATA' : 'EMPTY VAULT';
-
     const recent = [...items].sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0)).slice(0,4);
     $('#recentCards').innerHTML = recent.length ? recent.map(cardMarkup).join('') : emptyMarkup();
-
     renderCollection();
     bindCardEvents();
   }
@@ -297,28 +436,50 @@
       if(e.target.closest('[data-fav]')) return;
       openDetail(el.dataset.open);
     });
-    $$('[data-fav]').forEach(btn => btn.onclick = e => {
+    $$('[data-fav]').forEach(btn => btn.onclick = async e => {
       e.stopPropagation();
       const it = items.find(x=>x.id===btn.dataset.fav);
-      if(it){ it.favorite=!it.favorite; it.updatedAt=Date.now(); saveItems(); }
+      if(it){
+        const next={...normalizeItem(it),favorite:!it.favorite,updatedAt:Date.now()};
+        try{ await persistItem(next); }catch(err){ alert('保存できませんでした。VAULTからバックアップを書き出してください。'); }
+      }
     });
   }
   function showScreen(id){
     $$('.screen').forEach(s=>s.classList.remove('active'));
     $('#'+id).classList.add('active');
     $$('.nav [data-screen]').forEach(b=>b.classList.toggle('active', b.dataset.screen===id));
-    if(id!=='detailScreen' && id!=='settingsScreen') {
-      // nothing
-    }
     window.scrollTo({top:0,behavior:'smooth'});
   }
+
+  function detailGalleryMarkup(item){
+    const photos=normalizeItem(item).photos;
+    if(!photos.length) return `<div class="detailHero"><div class="placeholder"></div></div>`;
+    if(photos.length===1) return `<div class="detailHero"><img src="${photos[0]}" alt=""></div>`;
+    return `<div class="detailGallery">
+      <div class="detailScroller" id="detailScroller">${photos.map((p,i)=>`<div class="detailSlide"><img src="${p}" alt="Photo ${i+1}"></div>`).join('')}</div>
+      <div class="galleryBar"><span class="galleryCount" id="galleryCount">1 / ${photos.length}</span><span class="galleryHint">SWIPE ↔</span><span class="galleryDots" id="galleryDots">${photos.map((_,i)=>`<span class="galleryDot ${i===0?'on':''}"></span>`).join('')}</span></div>
+    </div>`;
+  }
+  function bindDetailGallery(photoCount){
+    const scroller=$('#detailScroller');
+    if(!scroller) return;
+    let ticking=false;
+    const update=()=>{
+      const idx=Math.max(0,Math.min(photoCount-1,Math.round(scroller.scrollLeft/Math.max(1,scroller.clientWidth))));
+      const count=$('#galleryCount'); if(count) count.textContent=`${idx+1} / ${photoCount}`;
+      $$('#galleryDots .galleryDot').forEach((d,i)=>d.classList.toggle('on',i===idx));
+      ticking=false;
+    };
+    scroller.addEventListener('scroll',()=>{ if(!ticking){ ticking=true; requestAnimationFrame(update); } },{passive:true});
+  }
   function openDetail(id){
-    const item = items.find(x=>x.id===id);
-    if(!item) return;
+    const raw = items.find(x=>x.id===id);
+    if(!raw) return;
+    const item=normalizeItem(raw);
     currentDetailId=id;
-    const img = item.photo ? `<div class="detailHero"><img src="${item.photo}" alt=""></div>` : `<div class="detailHero"><div class="placeholder"></div></div>`;
     $('#detailContent').innerHTML = `
-      ${img}
+      ${detailGalleryMarkup(item)}
       <h1 class="detailTitle">${escapeHtml(item.name)}</h1>
       <div class="detailMeta">${escapeHtml(item.maker || 'UNKNOWN MAKER')} ${item.scale?' / '+escapeHtml(item.scale):''}</div>
       <div class="detailGrid">
@@ -329,35 +490,59 @@
       </div>
       <div class="notes">${escapeHtml(item.notes||'No notes recorded.')}</div>
       <div class="actions"><button class="btn" id="editDetail">EDIT</button><button class="btn danger" id="deleteDetail">DELETE</button></div>`;
+    bindDetailGallery(item.photos.length);
     $('#editDetail').onclick=()=>openEditor(item);
-    $('#deleteDetail').onclick=()=>{
+    $('#deleteDetail').onclick=async()=>{
       if(confirm(`Delete "${item.name}" from VAULT//R?`)){
-        items=items.filter(x=>x.id!==id); saveItems(); showScreen('collectionScreen');
+        try{ await removeItem(id); showScreen('collectionScreen'); }
+        catch(err){ alert('削除できませんでした。'); }
       }
     };
     showScreen('detailScreen');
   }
+
   function openEditor(item=null){
     $('#itemForm').reset();
-    $('#itemId').value = item?.id || '';
-    $('#editorTitle').textContent = item ? 'EDIT ARTIFACT' : 'REGISTER ARTIFACT';
-    $('#nameInput').value = item?.name || '';
-    $('#categoryInput').value = item?.category || 'model';
-    $('#statusInput').value = item?.status || 'unbuilt';
-    $('#makerInput').value = item?.maker || '';
-    $('#scaleInput').value = item?.scale || '';
-    $('#dateInput').value = item?.date || '';
-    $('#storageInput').value = item?.storage || '';
-    $('#notesInput').value = item?.notes || '';
-    $('#favoriteInput').checked = !!item?.favorite;
-    currentPhoto = item?.photo || '';
-    renderPreview();
+    const n=item ? normalizeItem(item) : null;
+    $('#itemId').value = n?.id || '';
+    $('#editorTitle').textContent = n ? 'EDIT ARTIFACT' : 'REGISTER ARTIFACT';
+    $('#nameInput').value = n?.name || '';
+    $('#categoryInput').value = n?.category || 'model';
+    $('#statusInput').value = n?.status || 'unbuilt';
+    $('#makerInput').value = n?.maker || '';
+    $('#scaleInput').value = n?.scale || '';
+    $('#dateInput').value = n?.date || '';
+    $('#storageInput').value = n?.storage || '';
+    $('#notesInput').value = n?.notes || '';
+    $('#favoriteInput').checked = !!n?.favorite;
+    currentPhotos = n ? [...n.photos] : [];
+    currentCoverIndex = n?.coverIndex || 0;
+    renderPhotoEditor();
     $('#editorModal').classList.add('show');
   }
   function closeEditor(){ $('#editorModal').classList.remove('show'); }
-  function renderPreview(){
-    $('#photoPreview').innerHTML = currentPhoto ? `<img src="${currentPhoto}" alt="">` : `<span style="color:#666;font-size:12px;letter-spacing:.12em">NO IMAGE</span>`;
+  function renderPhotoEditor(){
+    if(currentCoverIndex<0 || currentCoverIndex>=currentPhotos.length) currentCoverIndex=0;
+    const cover=currentPhotos[currentCoverIndex] || '';
+    $('#photoPreview').innerHTML = cover ? `<img src="${cover}" alt=""><span class="coverBadge">COVER PHOTO</span>` : `<span style="color:#666;font-size:12px;letter-spacing:.12em">NO IMAGE</span>`;
+    $('#photoCount').textContent=`${currentPhotos.length} / ${MAX_PHOTOS}`;
+    $('#photoThumbs').innerHTML=currentPhotos.map((p,i)=>`<div class="photoThumb ${i===currentCoverIndex?'cover':''}">
+      <button type="button" class="setCover" data-cover="${i}" aria-label="Set cover photo"></button>
+      <img src="${p}" alt="Photo ${i+1}">
+      <span class="num">${i===currentCoverIndex?'COVER':i+1}</span>
+      <button type="button" class="removePhoto" data-remove-photo="${i}" aria-label="Remove photo">×</button>
+    </div>`).join('');
+    $$('[data-cover]').forEach(btn=>btn.onclick=()=>{ currentCoverIndex=Number(btn.dataset.cover); renderPhotoEditor(); });
+    $$('[data-remove-photo]').forEach(btn=>btn.onclick=e=>{
+      e.stopPropagation();
+      const idx=Number(btn.dataset.removePhoto);
+      currentPhotos.splice(idx,1);
+      if(idx<currentCoverIndex) currentCoverIndex--;
+      if(currentCoverIndex>=currentPhotos.length) currentCoverIndex=Math.max(0,currentPhotos.length-1);
+      renderPhotoEditor();
+    });
   }
+
   async function compressImage(file){
     if(!file) return '';
     const dataUrl = await new Promise((res,rej)=>{
@@ -366,25 +551,38 @@
     const img = await new Promise((res,rej)=>{
       const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=dataUrl;
     });
-    const max=1100;
+    const max=960;
     const ratio=Math.min(1,max/Math.max(img.width,img.height));
     const c=document.createElement('canvas');
     c.width=Math.max(1,Math.round(img.width*ratio)); c.height=Math.max(1,Math.round(img.height*ratio));
-    c.getContext('2d').drawImage(img,0,0,c.width,c.height);
-    return c.toDataURL('image/jpeg',0.72);
+    c.getContext('2d',{alpha:false}).drawImage(img,0,0,c.width,c.height);
+    return c.toDataURL('image/jpeg',0.68);
   }
-
   $('#photoInput').addEventListener('change', async e=>{
-    const f=e.target.files?.[0]; if(!f) return;
-    currentPhoto = await compressImage(f); renderPreview();
+    const files=[...(e.target.files || [])];
+    if(!files.length) return;
+    const slots=MAX_PHOTOS-currentPhotos.length;
+    if(slots<=0){ alert(`写真は1作品につき最大${MAX_PHOTOS}枚です。`); e.target.value=''; return; }
+    const selected=files.slice(0,slots);
+    if(files.length>slots) alert(`最大${MAX_PHOTOS}枚までなので、先頭${slots}枚を追加します。`);
+    const oldLabel=$('#photoCount').textContent;
+    $('#photoCount').textContent='PROCESSING...';
+    try{
+      for(const f of selected){ currentPhotos.push(await compressImage(f)); }
+      if(currentPhotos.length && currentCoverIndex>=currentPhotos.length) currentCoverIndex=0;
+      renderPhotoEditor();
+    }catch(err){ alert('写真を読み込めませんでした。別の画像で試してください。'); $('#photoCount').textContent=oldLabel; }
+    e.target.value='';
   });
 
-  $('#itemForm').addEventListener('submit', e=>{
+  $('#itemForm').addEventListener('submit', async e=>{
     e.preventDefault();
     const now=Date.now();
     const id=$('#itemId').value || (crypto.randomUUID ? crypto.randomUUID() : String(now)+Math.random());
     const old=items.find(x=>x.id===id);
-    const next={
+    const photos=[...currentPhotos];
+    const coverIndex=photos.length ? Math.min(currentCoverIndex,photos.length-1) : 0;
+    const next=normalizeItem({
       id,
       name:$('#nameInput').value.trim(),
       category:$('#categoryInput').value,
@@ -395,15 +593,16 @@
       storage:$('#storageInput').value.trim(),
       notes:$('#notesInput').value.trim(),
       favorite:$('#favoriteInput').checked,
-      photo:currentPhoto,
+      photos,
+      coverIndex,
+      photo:photos[coverIndex] || '',
       createdAt:old?.createdAt || now,
       updatedAt:now
-    };
-    const idx=items.findIndex(x=>x.id===id);
-    if(idx>=0) items[idx]=next; else items.push(next);
-    try { saveItems(); closeEditor(); openDetail(id); }
-    catch(err){
-      alert('保存容量がいっぱいの可能性があります。写真を減らすか、バックアップを書き出して整理してください。');
+    });
+    try{
+      await persistItem(next); closeEditor(); openDetail(id);
+    }catch(err){
+      alert('保存容量がいっぱいの可能性があります。VAULTからバックアップを書き出すか、写真を少し減らしてください。');
     }
   });
 
@@ -416,7 +615,7 @@
   $$('.nav [data-screen]').forEach(b=>b.onclick=()=>showScreen(b.dataset.screen));
 
   $('#exportBtn').onclick=()=>{
-    const payload={app:'VAULT//R',version:'0.2',exportedAt:new Date().toISOString(),items};
+    const payload={app:'VAULT//R',version:'0.3',storage:storageMode,exportedAt:new Date().toISOString(),items:items.map(normalizeItem)};
     const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
     const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
     a.download=`VAULT_R_backup_${new Date().toISOString().slice(0,10)}.json`; a.click();
@@ -428,14 +627,20 @@
       const obj=JSON.parse(await file.text());
       if(!Array.isArray(obj.items)) throw new Error('bad format');
       if(confirm(`Import ${obj.items.length} artifacts? Current local data will be replaced.`)){
-        items=obj.items; saveItems(); showScreen('collectionScreen');
+        await replaceAll(obj.items); showScreen('collectionScreen');
       }
     }catch(err){ alert('VAULT//R backupとして読み込めませんでした。'); }
     e.target.value='';
   };
-  $('#clearBtn').onclick=()=>{
+  $('#clearBtn').onclick=async()=>{
     if(confirm('すべてのローカルデータを削除します。元には戻せません。')){
-      items=[]; localStorage.removeItem(KEY); localStorage.removeItem(OLD_KEY); renderAll(); showScreen('homeScreen');
+      try{
+        if(storageMode==='indexedDB') await dbClear();
+        items=[];
+        [FALLBACK_KEY,...LEGACY_KEYS].forEach(k=>localStorage.removeItem(k));
+        localStorage.setItem(MIGRATION_DONE,'1');
+        renderAll(); showScreen('homeScreen');
+      }catch(err){ alert('データを削除できませんでした。'); }
     }
   };
 
@@ -444,41 +649,29 @@
   function refreshInstallState(){
     const btn=$('#installBtn'), state=$('#installState'), text=$('#installText');
     if(isStandalone()){
-      btn.style.display='none';
-      state.textContent='INSTALLED / STANDALONE MODE';
-      text.textContent='VAULT//Rはアプリモードで起動中。ブラウザのタブバーは表示されません。';
-      return;
+      btn.style.display='none'; state.textContent=`INSTALLED / ${storageMode==='indexedDB'?'EXTENDED LOCAL STORAGE':'LOCAL STORAGE'}`;
+      text.textContent='VAULT//Rはアプリモードで起動中。v0.3では複数写真と大容量向けローカル保存に対応しています。'; return;
     }
     if(location.protocol==='file:'){
-      btn.style.display='none';
-      state.textContent='LOCAL PREVIEW MODE';
-      text.textContent='いまはファイルを直接開いているテスト表示です。全画面アプリ化にはHTTPSまたはlocalhostで一度開いてインストールします。';
-      return;
+      btn.style.display='none'; state.textContent='LOCAL PREVIEW MODE';
+      text.textContent='いまはファイルを直接開いているテスト表示です。全画面アプリ化にはHTTPSまたはlocalhostで一度開いてインストールします。'; return;
     }
-    if(deferredInstallPrompt){
-      btn.style.display='block';
-      state.textContent='READY TO INSTALL';
-    } else {
-      btn.style.display='none';
-      state.textContent='BROWSER MENU → INSTALL APP';
-    }
+    if(deferredInstallPrompt){ btn.style.display='block'; state.textContent='READY TO INSTALL'; }
+    else { btn.style.display='none'; state.textContent='BROWSER MENU → INSTALL APP'; }
   }
-  window.addEventListener('beforeinstallprompt', e=>{
-    e.preventDefault();
-    deferredInstallPrompt=e;
-    refreshInstallState();
-  });
+  window.addEventListener('beforeinstallprompt', e=>{ e.preventDefault(); deferredInstallPrompt=e; refreshInstallState(); });
   window.addEventListener('appinstalled', ()=>{ deferredInstallPrompt=null; refreshInstallState(); });
   $('#installBtn').onclick=async()=>{
     if(!deferredInstallPrompt) return;
-    deferredInstallPrompt.prompt();
-    await deferredInstallPrompt.userChoice.catch(()=>null);
-    deferredInstallPrompt=null;
-    refreshInstallState();
+    deferredInstallPrompt.prompt(); await deferredInstallPrompt.userChoice.catch(()=>null); deferredInstallPrompt=null; refreshInstallState();
   };
 
-  renderAll();
-  refreshInstallState();
+  async function init(){
+    items=await loadItems();
+    renderAll(); refreshInstallState();
+    if(navigator.storage?.persist) navigator.storage.persist().catch(()=>{});
+  }
+  init().catch(()=>{ items=getLegacyItems(); storageMode='localStorage'; renderAll(); refreshInstallState(); });
 
   if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost' || location.hostname==='127.0.0.1')){
     navigator.serviceWorker.register('./sw.js').catch(()=>{});
