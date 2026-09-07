@@ -1,0 +1,489 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#090909" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="VAULT//R" />
+  <link rel="apple-touch-icon" href="assets/icon-192.png" />
+  <title>VAULT//R</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <style>
+    :root{
+      --bg:#080808; --panel:#111; --panel2:#181818; --ink:#f2f0ea; --muted:#8f8a82;
+      --line:#2a2927; --accent:#b60d18; --accent2:#e51b2a; --cream:#d8d1c5;
+      --shadow:0 18px 50px rgba(0,0,0,.45);
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;background:#050505;color:var(--ink);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;min-height:100%;overscroll-behavior-y:none}
+    body{min-height:100vh;background:
+      radial-gradient(circle at 20% -10%, rgba(182,13,24,.18), transparent 30%),
+      linear-gradient(180deg,#090909,#050505 45%,#080808)}
+    button,input,select,textarea{font:inherit}
+    button{cursor:pointer}
+    .app{max-width:560px;margin:auto;min-height:100dvh;padding-bottom:calc(92px + env(safe-area-inset-bottom));padding-top:env(safe-area-inset-top)}
+    .hero{position:relative;height:250px;overflow:hidden;border-bottom:1px solid var(--line);background:#0b0b0b}
+    .hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.04),rgba(0,0,0,.15) 45%,#080808 100%)}
+    .hero img{width:100%;height:100%;object-fit:cover;filter:grayscale(.15) contrast(1.05) brightness(.75)}
+    .heroTop{position:absolute;z-index:2;left:20px;right:20px;top:18px;display:flex;justify-content:space-between;align-items:flex-start}
+    .brand{font-weight:900;letter-spacing:.08em;font-size:28px;line-height:1}
+    .brand span{color:var(--accent2)}
+    .tag{font-size:10px;letter-spacing:.22em;color:#d8d1c5;margin-top:7px}
+    .heroBadge{font-size:10px;letter-spacing:.16em;border:1px solid rgba(255,255,255,.25);padding:8px 10px;background:rgba(0,0,0,.42);backdrop-filter:blur(7px)}
+    .heroBottom{position:absolute;z-index:2;left:20px;right:20px;bottom:18px}
+    .heroBottom h1{font-size:18px;margin:0 0 5px;letter-spacing:.08em}
+    .heroBottom p{margin:0;color:#aaa39b;font-size:12px}
+    .content{padding:18px}
+    .sectionHead{display:flex;align-items:end;justify-content:space-between;margin:8px 0 12px}
+    .sectionHead h2{margin:0;font-size:15px;letter-spacing:.12em}
+    .sectionHead small{color:var(--muted);font-size:11px}
+    .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:18px}
+    .stat{background:linear-gradient(180deg,#151515,#0f0f0f);border:1px solid var(--line);padding:13px 12px;min-height:72px;box-shadow:var(--shadow)}
+    .stat b{display:block;font-size:26px;line-height:1;margin-bottom:8px}
+    .stat span{font-size:9px;color:var(--muted);letter-spacing:.14em}
+    .toolbar{display:grid;grid-template-columns:1fr 118px;gap:8px;margin-bottom:10px}
+    .search,.filter{background:#0f0f0f;color:var(--ink);border:1px solid var(--line);border-radius:0;padding:12px}
+    .cards{display:grid;gap:10px}
+    .card{display:grid;grid-template-columns:100px 1fr;background:linear-gradient(120deg,#161616,#0d0d0d);border:1px solid var(--line);min-height:110px;overflow:hidden;box-shadow:0 12px 30px rgba(0,0,0,.25)}
+    .thumb{background:#111;position:relative}
+    .thumb img{width:100%;height:100%;object-fit:cover;display:block}
+    .placeholder{height:100%;display:grid;place-items:center;background:
+      linear-gradient(135deg,transparent 48%,rgba(182,13,24,.22) 49% 51%,transparent 52%),
+      radial-gradient(circle at 50% 50%,#1d1d1d,#0e0e0e)}
+    .placeholder::before{content:"//R";font-size:24px;font-weight:900;color:#5d5a55;letter-spacing:.05em}
+    .cardBody{padding:12px;min-width:0}
+    .cardTop{display:flex;justify-content:space-between;gap:8px}
+    .card h3{font-size:14px;margin:0 0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .meta{font-size:10px;color:var(--muted);letter-spacing:.06em;margin-bottom:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .chips{display:flex;flex-wrap:wrap;gap:5px}
+    .chip{font-size:8px;letter-spacing:.13em;padding:5px 7px;border:1px solid #333;color:#bdb7ae}
+    .chip.red{border-color:#5f151c;color:#ef6670;background:#1b0b0d}
+    .fav{background:none;border:0;color:#666;font-size:18px;padding:0}
+    .fav.on{color:var(--accent2)}
+    .empty{border:1px dashed #333;padding:30px 20px;text-align:center;color:var(--muted);background:#0d0d0d}
+    .empty b{display:block;color:#ccc;margin-bottom:7px}
+    .fab{position:fixed;z-index:20;right:max(18px,calc((100vw - 560px)/2 + 18px));bottom:calc(76px + env(safe-area-inset-bottom));width:56px;height:56px;border-radius:50%;border:1px solid #e03b47;background:var(--accent);color:#fff;font-size:28px;box-shadow:0 12px 35px rgba(182,13,24,.35)}
+    .nav{position:fixed;z-index:19;left:50%;transform:translateX(-50%);bottom:0;width:min(560px,100%);height:calc(68px + env(safe-area-inset-bottom));background:rgba(8,8,8,.95);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(4,1fr);backdrop-filter:blur(10px);padding-bottom:env(safe-area-inset-bottom)}
+    .nav button{background:none;border:0;color:#666;font-size:10px;letter-spacing:.08em}
+    .nav button.active{color:#fff}
+    .nav button.active::before{content:"";display:block;width:18px;height:2px;background:var(--accent2);margin:0 auto 7px}
+    .modal{position:fixed;z-index:50;inset:0;background:rgba(0,0,0,.78);display:none;align-items:flex-end;justify-content:center}
+    .modal.show{display:flex}
+    .sheet{width:min(560px,100%);max-height:92vh;overflow:auto;background:#0d0d0d;border:1px solid #252525;border-bottom:0;padding:18px 18px calc(24px + env(safe-area-inset-bottom));box-shadow:0 -20px 70px rgba(0,0,0,.7)}
+    .sheetHead{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+    .sheetHead h2{font-size:18px;margin:0;letter-spacing:.08em}
+    .x{border:0;background:none;color:#999;font-size:25px}
+    label{display:block;font-size:9px;color:#9f9990;letter-spacing:.15em;margin-bottom:6px}
+    .field{margin-bottom:12px}
+    input,select,textarea{width:100%;padding:12px;background:#151515;color:#eee;border:1px solid #333;outline:none}
+    textarea{min-height:90px;resize:vertical}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .photoPreview{height:180px;border:1px dashed #373737;background:#101010;display:grid;place-items:center;overflow:hidden;margin-bottom:10px}
+    .photoPreview img{width:100%;height:100%;object-fit:cover}
+    .btn{width:100%;border:1px solid #3a3a3a;background:#171717;color:#eee;padding:13px;letter-spacing:.08em}
+    .btn.primary{background:var(--accent);border-color:#dd2735}
+    .btn.danger{background:#160a0c;border-color:#5d1118;color:#ff7680}
+    .detailHero{height:300px;border:1px solid var(--line);background:#0e0e0e;overflow:hidden;margin-bottom:14px}
+    .detailHero img{width:100%;height:100%;object-fit:cover}
+    .detailTitle{font-size:24px;margin:0 0 6px}
+    .detailMeta{color:var(--muted);font-size:12px;margin-bottom:16px}
+    .detailGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+    .kv{background:#121212;border:1px solid #292929;padding:12px}
+    .kv small{display:block;color:#777;font-size:9px;letter-spacing:.12em;margin-bottom:4px}
+    .kv b{font-size:13px}
+    .notes{background:#111;border-left:2px solid var(--accent);padding:13px;color:#c7c1b8;font-size:13px;line-height:1.6;white-space:pre-wrap}
+    .actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+    .screen{display:none}.screen.active{display:block}
+    .utility{display:grid;gap:10px}
+    .utility p{color:#8f8a82;font-size:12px;line-height:1.6;margin:0 0 8px}
+    .fileBtn{display:block;text-align:center;border:1px solid #3a3a3a;background:#171717;color:#eee;padding:13px;letter-spacing:.08em}
+    .fileBtn input{display:none}
+    .footerMark{text-align:center;color:#45413e;font-size:10px;letter-spacing:.22em;margin:30px 0 12px}
+
+    .installCard{border:1px solid #3a2528;background:linear-gradient(135deg,#151111,#0d0d0d);padding:14px;margin-bottom:10px}
+    .installCard b{display:block;font-size:13px;letter-spacing:.08em;margin-bottom:6px}
+    .installCard span{display:block;color:#9d9690;font-size:11px;line-height:1.55;margin-bottom:10px}
+    .installState{font-size:9px;letter-spacing:.16em;color:#ef6670}
+    @media (display-mode: standalone){.app{padding-top:env(safe-area-inset-top)} }
+    @media (max-width:400px){.hero{height:225px}.stats{gap:6px}.stat{padding:11px 9px}.card{grid-template-columns:86px 1fr}}
+  </style>
+</head>
+<body>
+<div class="app">
+  <section id="homeScreen" class="screen active">
+    <div class="hero">
+      <img src="assets/vault-cover.png" alt="VAULT R cover">
+      <div class="heroTop">
+        <div><div class="brand">VAULT<span>//R</span></div><div class="tag">COLLECT. RECORD. REMEMBER.</div></div>
+        <div class="heroBadge">LOCAL ARCHIVE</div>
+      </div>
+      <div class="heroBottom">
+        <h1>YOUR PRIVATE COLLECTION ARCHIVE</h1>
+        <p>Figures / Model Kits / Built Works / Unbuilt Stock</p>
+      </div>
+    </div>
+    <div class="content">
+      <div class="sectionHead"><h2>ARCHIVE STATUS</h2><small id="lastUpdated"></small></div>
+      <div class="stats">
+        <div class="stat"><b id="statTotal">0</b><span>TOTAL</span></div>
+        <div class="stat"><b id="statBuilt">0</b><span>BUILT</span></div>
+        <div class="stat"><b id="statFav">0</b><span>FAVORITE</span></div>
+      </div>
+      <div class="sectionHead"><h2>RECENT ARTIFACTS</h2><small>latest 4</small></div>
+      <div id="recentCards" class="cards"></div>
+    </div>
+  </section>
+
+  <section id="collectionScreen" class="screen">
+    <div class="content">
+      <div class="sectionHead"><h2>COLLECTION</h2><small id="collectionCount">0 artifacts</small></div>
+      <div class="toolbar">
+        <input id="searchInput" class="search" placeholder="SEARCH ARCHIVE..." />
+        <select id="filterSelect" class="filter">
+          <option value="all">ALL</option>
+          <option value="built">BUILT</option>
+          <option value="unbuilt">UNBUILT</option>
+          <option value="figure">FIGURE</option>
+          <option value="model">MODEL KIT</option>
+          <option value="favorite">FAVORITE</option>
+        </select>
+      </div>
+      <div id="collectionCards" class="cards"></div>
+    </div>
+  </section>
+
+  <section id="detailScreen" class="screen">
+    <div class="content" id="detailContent"></div>
+  </section>
+
+  <section id="settingsScreen" class="screen">
+    <div class="content">
+      <div class="sectionHead"><h2>LOCAL VAULT</h2><small>v0.2</small></div>
+      <div class="utility">
+        <div class="installCard" id="installCard">
+          <b>APP MODE</b>
+          <span id="installText">ホーム画面にインストールすると、ブラウザのタブバーなしでVAULT//Rだけを全画面起動できます。</span>
+          <button class="btn primary" id="installBtn" type="button" style="display:none">INSTALL VAULT//R</button>
+          <div class="installState" id="installState">CHECKING...</div>
+        </div>
+        <p>コレクション情報と写真はこの端末のブラウザ内に保存されます。端末変更やブラウザデータ削除に備えて、定期的にバックアップを書き出してください。</p>
+        <button class="btn" id="exportBtn">EXPORT BACKUP (.JSON)</button>
+        <label class="fileBtn">IMPORT BACKUP<input id="importInput" type="file" accept="application/json"></label>
+        <button class="btn danger" id="clearBtn">ERASE ALL LOCAL DATA</button>
+      </div>
+      <div class="footerMark">VAULT//R — FOR THOSE WHO BUILD</div>
+    </div>
+  </section>
+</div>
+
+<button class="fab" id="addBtn" aria-label="Add">+</button>
+
+<nav class="nav">
+  <button data-screen="homeScreen" class="active">HOME</button>
+  <button data-screen="collectionScreen">ARCHIVE</button>
+  <button id="navAdd">ADD</button>
+  <button data-screen="settingsScreen">VAULT</button>
+</nav>
+
+<div class="modal" id="editorModal">
+  <div class="sheet">
+    <div class="sheetHead"><h2 id="editorTitle">REGISTER ARTIFACT</h2><button class="x" id="closeEditor">×</button></div>
+    <form id="itemForm">
+      <input type="hidden" id="itemId" />
+      <div class="photoPreview" id="photoPreview"><span style="color:#666;font-size:12px;letter-spacing:.12em">NO IMAGE</span></div>
+      <div class="field"><label>PHOTO</label><input id="photoInput" type="file" accept="image/*" /></div>
+      <div class="field"><label>NAME *</label><input id="nameInput" required placeholder="e.g. CHITOSELIUM / RX-78-2" /></div>
+      <div class="grid2">
+        <div class="field"><label>CATEGORY</label><select id="categoryInput"><option value="model">MODEL KIT</option><option value="figure">FIGURE</option><option value="other">OTHER</option></select></div>
+        <div class="field"><label>STATUS</label><select id="statusInput"><option value="unbuilt">UNBUILT</option><option value="built">BUILT</option><option value="wip">WIP</option></select></div>
+      </div>
+      <div class="grid2">
+        <div class="field"><label>MAKER</label><input id="makerInput" placeholder="Bandai / Kotobukiya..." /></div>
+        <div class="field"><label>SCALE / GRADE</label><input id="scaleInput" placeholder="1/100 / MG / 1/7..." /></div>
+      </div>
+      <div class="grid2">
+        <div class="field"><label>PURCHASE DATE</label><input id="dateInput" type="date" /></div>
+        <div class="field"><label>STORAGE</label><input id="storageInput" placeholder="Shelf A / Box 3..." /></div>
+      </div>
+      <div class="field"><label>NOTES</label><textarea id="notesInput" placeholder="Paint recipe, decals, memories, defects..."></textarea></div>
+      <div class="field"><label><input id="favoriteInput" type="checkbox" style="width:auto;margin-right:8px"> FAVORITE</label></div>
+      <button class="btn primary" type="submit">SAVE TO VAULT</button>
+    </form>
+  </div>
+</div>
+
+<script>
+(() => {
+  const KEY = 'vaultr_items_v02';
+  const OLD_KEY = 'vaultr_items_v01';
+  let items = loadItems();
+  let currentPhoto = '';
+  let currentDetailId = null;
+
+  const $ = s => document.querySelector(s);
+  const $$ = s => [...document.querySelectorAll(s)];
+
+  function loadItems(){
+    try {
+      const current = localStorage.getItem(KEY);
+      if(current) return JSON.parse(current);
+      const old = localStorage.getItem(OLD_KEY);
+      if(old){
+        localStorage.setItem(KEY, old);
+        return JSON.parse(old);
+      }
+      return [];
+    } catch(e){ return []; }
+  }
+  function saveItems(){
+    localStorage.setItem(KEY, JSON.stringify(items));
+    renderAll();
+  }
+  function escapeHtml(str=''){
+    return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+  function emptyMarkup(msg='NO ARTIFACTS RECORDED'){
+    return `<div class="empty"><b>${msg}</b><span>Tap + to register your collection.</span></div>`;
+  }
+  function cardMarkup(item){
+    const img = item.photo ? `<img src="${item.photo}" alt="">` : `<div class="placeholder"></div>`;
+    const cat = item.category === 'model' ? 'MODEL KIT' : item.category === 'figure' ? 'FIGURE' : 'OTHER';
+    const status = (item.status || 'unbuilt').toUpperCase();
+    return `<article class="card" data-open="${item.id}">
+      <div class="thumb">${img}</div>
+      <div class="cardBody">
+        <div class="cardTop">
+          <div style="min-width:0"><h3>${escapeHtml(item.name)}</h3><div class="meta">${escapeHtml(item.maker || 'UNKNOWN MAKER')} ${item.scale ? ' / '+escapeHtml(item.scale) : ''}</div></div>
+          <button class="fav ${item.favorite?'on':''}" data-fav="${item.id}" aria-label="favorite">◆</button>
+        </div>
+        <div class="chips"><span class="chip">${cat}</span><span class="chip ${item.status==='built'?'red':''}">${status}</span>${item.storage?`<span class="chip">${escapeHtml(item.storage)}</span>`:''}</div>
+      </div>
+    </article>`;
+  }
+  function renderAll(){
+    const total = items.length;
+    $('#statTotal').textContent = total;
+    $('#statBuilt').textContent = items.filter(x=>x.status==='built').length;
+    $('#statFav').textContent = items.filter(x=>x.favorite).length;
+    $('#collectionCount').textContent = `${total} artifact${total===1?'':'s'}`;
+    $('#lastUpdated').textContent = total ? 'LOCAL DATA' : 'EMPTY VAULT';
+
+    const recent = [...items].sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0)).slice(0,4);
+    $('#recentCards').innerHTML = recent.length ? recent.map(cardMarkup).join('') : emptyMarkup();
+
+    renderCollection();
+    bindCardEvents();
+  }
+  function renderCollection(){
+    const q = ($('#searchInput')?.value || '').trim().toLowerCase();
+    const f = $('#filterSelect')?.value || 'all';
+    let filtered = items.filter(item=>{
+      const hay = [item.name,item.maker,item.scale,item.storage,item.notes].join(' ').toLowerCase();
+      const searchOk = !q || hay.includes(q);
+      let filterOk = true;
+      if(f==='built'||f==='unbuilt') filterOk = item.status===f;
+      if(f==='figure'||f==='model') filterOk = item.category===f;
+      if(f==='favorite') filterOk = !!item.favorite;
+      return searchOk && filterOk;
+    }).sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
+    $('#collectionCards').innerHTML = filtered.length ? filtered.map(cardMarkup).join('') : emptyMarkup('NO MATCHING ARTIFACTS');
+    bindCardEvents();
+  }
+  function bindCardEvents(){
+    $$('[data-open]').forEach(el => el.onclick = e => {
+      if(e.target.closest('[data-fav]')) return;
+      openDetail(el.dataset.open);
+    });
+    $$('[data-fav]').forEach(btn => btn.onclick = e => {
+      e.stopPropagation();
+      const it = items.find(x=>x.id===btn.dataset.fav);
+      if(it){ it.favorite=!it.favorite; it.updatedAt=Date.now(); saveItems(); }
+    });
+  }
+  function showScreen(id){
+    $$('.screen').forEach(s=>s.classList.remove('active'));
+    $('#'+id).classList.add('active');
+    $$('.nav [data-screen]').forEach(b=>b.classList.toggle('active', b.dataset.screen===id));
+    if(id!=='detailScreen' && id!=='settingsScreen') {
+      // nothing
+    }
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
+  function openDetail(id){
+    const item = items.find(x=>x.id===id);
+    if(!item) return;
+    currentDetailId=id;
+    const img = item.photo ? `<div class="detailHero"><img src="${item.photo}" alt=""></div>` : `<div class="detailHero"><div class="placeholder"></div></div>`;
+    $('#detailContent').innerHTML = `
+      ${img}
+      <h1 class="detailTitle">${escapeHtml(item.name)}</h1>
+      <div class="detailMeta">${escapeHtml(item.maker || 'UNKNOWN MAKER')} ${item.scale?' / '+escapeHtml(item.scale):''}</div>
+      <div class="detailGrid">
+        <div class="kv"><small>CATEGORY</small><b>${(item.category||'other').toUpperCase()}</b></div>
+        <div class="kv"><small>STATUS</small><b>${(item.status||'unbuilt').toUpperCase()}</b></div>
+        <div class="kv"><small>PURCHASED</small><b>${escapeHtml(item.date||'—')}</b></div>
+        <div class="kv"><small>STORAGE</small><b>${escapeHtml(item.storage||'—')}</b></div>
+      </div>
+      <div class="notes">${escapeHtml(item.notes||'No notes recorded.')}</div>
+      <div class="actions"><button class="btn" id="editDetail">EDIT</button><button class="btn danger" id="deleteDetail">DELETE</button></div>`;
+    $('#editDetail').onclick=()=>openEditor(item);
+    $('#deleteDetail').onclick=()=>{
+      if(confirm(`Delete "${item.name}" from VAULT//R?`)){
+        items=items.filter(x=>x.id!==id); saveItems(); showScreen('collectionScreen');
+      }
+    };
+    showScreen('detailScreen');
+  }
+  function openEditor(item=null){
+    $('#itemForm').reset();
+    $('#itemId').value = item?.id || '';
+    $('#editorTitle').textContent = item ? 'EDIT ARTIFACT' : 'REGISTER ARTIFACT';
+    $('#nameInput').value = item?.name || '';
+    $('#categoryInput').value = item?.category || 'model';
+    $('#statusInput').value = item?.status || 'unbuilt';
+    $('#makerInput').value = item?.maker || '';
+    $('#scaleInput').value = item?.scale || '';
+    $('#dateInput').value = item?.date || '';
+    $('#storageInput').value = item?.storage || '';
+    $('#notesInput').value = item?.notes || '';
+    $('#favoriteInput').checked = !!item?.favorite;
+    currentPhoto = item?.photo || '';
+    renderPreview();
+    $('#editorModal').classList.add('show');
+  }
+  function closeEditor(){ $('#editorModal').classList.remove('show'); }
+  function renderPreview(){
+    $('#photoPreview').innerHTML = currentPhoto ? `<img src="${currentPhoto}" alt="">` : `<span style="color:#666;font-size:12px;letter-spacing:.12em">NO IMAGE</span>`;
+  }
+  async function compressImage(file){
+    if(!file) return '';
+    const dataUrl = await new Promise((res,rej)=>{
+      const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(file);
+    });
+    const img = await new Promise((res,rej)=>{
+      const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=dataUrl;
+    });
+    const max=1100;
+    const ratio=Math.min(1,max/Math.max(img.width,img.height));
+    const c=document.createElement('canvas');
+    c.width=Math.max(1,Math.round(img.width*ratio)); c.height=Math.max(1,Math.round(img.height*ratio));
+    c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+    return c.toDataURL('image/jpeg',0.72);
+  }
+
+  $('#photoInput').addEventListener('change', async e=>{
+    const f=e.target.files?.[0]; if(!f) return;
+    currentPhoto = await compressImage(f); renderPreview();
+  });
+
+  $('#itemForm').addEventListener('submit', e=>{
+    e.preventDefault();
+    const now=Date.now();
+    const id=$('#itemId').value || (crypto.randomUUID ? crypto.randomUUID() : String(now)+Math.random());
+    const old=items.find(x=>x.id===id);
+    const next={
+      id,
+      name:$('#nameInput').value.trim(),
+      category:$('#categoryInput').value,
+      status:$('#statusInput').value,
+      maker:$('#makerInput').value.trim(),
+      scale:$('#scaleInput').value.trim(),
+      date:$('#dateInput').value,
+      storage:$('#storageInput').value.trim(),
+      notes:$('#notesInput').value.trim(),
+      favorite:$('#favoriteInput').checked,
+      photo:currentPhoto,
+      createdAt:old?.createdAt || now,
+      updatedAt:now
+    };
+    const idx=items.findIndex(x=>x.id===id);
+    if(idx>=0) items[idx]=next; else items.push(next);
+    try { saveItems(); closeEditor(); openDetail(id); }
+    catch(err){
+      alert('保存容量がいっぱいの可能性があります。写真を減らすか、バックアップを書き出して整理してください。');
+    }
+  });
+
+  $('#addBtn').onclick=()=>openEditor();
+  $('#navAdd').onclick=()=>openEditor();
+  $('#closeEditor').onclick=closeEditor;
+  $('#editorModal').onclick=e=>{ if(e.target===$('#editorModal')) closeEditor(); };
+  $('#searchInput').addEventListener('input',renderCollection);
+  $('#filterSelect').addEventListener('change',renderCollection);
+  $$('.nav [data-screen]').forEach(b=>b.onclick=()=>showScreen(b.dataset.screen));
+
+  $('#exportBtn').onclick=()=>{
+    const payload={app:'VAULT//R',version:'0.2',exportedAt:new Date().toISOString(),items};
+    const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+    a.download=`VAULT_R_backup_${new Date().toISOString().slice(0,10)}.json`; a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+  };
+  $('#importInput').onchange=async e=>{
+    const file=e.target.files?.[0]; if(!file) return;
+    try{
+      const obj=JSON.parse(await file.text());
+      if(!Array.isArray(obj.items)) throw new Error('bad format');
+      if(confirm(`Import ${obj.items.length} artifacts? Current local data will be replaced.`)){
+        items=obj.items; saveItems(); showScreen('collectionScreen');
+      }
+    }catch(err){ alert('VAULT//R backupとして読み込めませんでした。'); }
+    e.target.value='';
+  };
+  $('#clearBtn').onclick=()=>{
+    if(confirm('すべてのローカルデータを削除します。元には戻せません。')){
+      items=[]; localStorage.removeItem(KEY); localStorage.removeItem(OLD_KEY); renderAll(); showScreen('homeScreen');
+    }
+  };
+
+  let deferredInstallPrompt = null;
+  const isStandalone = () => window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  function refreshInstallState(){
+    const btn=$('#installBtn'), state=$('#installState'), text=$('#installText');
+    if(isStandalone()){
+      btn.style.display='none';
+      state.textContent='INSTALLED / STANDALONE MODE';
+      text.textContent='VAULT//Rはアプリモードで起動中。ブラウザのタブバーは表示されません。';
+      return;
+    }
+    if(location.protocol==='file:'){
+      btn.style.display='none';
+      state.textContent='LOCAL PREVIEW MODE';
+      text.textContent='いまはファイルを直接開いているテスト表示です。全画面アプリ化にはHTTPSまたはlocalhostで一度開いてインストールします。';
+      return;
+    }
+    if(deferredInstallPrompt){
+      btn.style.display='block';
+      state.textContent='READY TO INSTALL';
+    } else {
+      btn.style.display='none';
+      state.textContent='BROWSER MENU → INSTALL APP';
+    }
+  }
+  window.addEventListener('beforeinstallprompt', e=>{
+    e.preventDefault();
+    deferredInstallPrompt=e;
+    refreshInstallState();
+  });
+  window.addEventListener('appinstalled', ()=>{ deferredInstallPrompt=null; refreshInstallState(); });
+  $('#installBtn').onclick=async()=>{
+    if(!deferredInstallPrompt) return;
+    deferredInstallPrompt.prompt();
+    await deferredInstallPrompt.userChoice.catch(()=>null);
+    deferredInstallPrompt=null;
+    refreshInstallState();
+  };
+
+  renderAll();
+  refreshInstallState();
+
+  if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost' || location.hostname==='127.0.0.1')){
+    navigator.serviceWorker.register('./sw.js').catch(()=>{});
+  }
+})();
+</script>
+</body>
+</html>
